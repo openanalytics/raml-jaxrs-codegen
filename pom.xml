@@ -17,6 +17,14 @@
         <licensePath>LICENSE_HEADER.txt</licensePath>
     </properties>
 
+    <distributionManagement>
+        <snapshotRepository>
+            <id>oa-nexus-3rd-party</id>
+            <name>OpenAnalytics 3rd Party Snapshots Repository</name>
+            <url>http://nexus.internal.openanalytics.eu:8080/nexus/content/repositories/3rd-party-snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
+
     <build>
         <plugins>
             <plugin>
