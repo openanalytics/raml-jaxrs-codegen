@@ -65,6 +65,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.lang.math.NumberUtils;
+import org.raml.jaxrs.codegen.core.Configuration.JaxrsVersion;
 import org.raml.model.Action;
 import org.raml.model.MimeType;
 import org.raml.model.Raml;
@@ -112,6 +113,10 @@ public class Generator
 
     public Set<String> run(final Reader ramlReader, final Configuration configuration) throws Exception
     {
+        if (isNotBlank(configuration.getAsyncResourceTrait()) && configuration.getJaxrsVersion() == JaxrsVersion.JAXRS_1_1) {
+            throw new IllegalArgumentException("Asynchronous resources are not supported in JAX-RS 1.1");
+        }
+        
         final String ramlBuffer = IOUtils.toString(ramlReader);
         
         ResourceLoader[] loaderArray = prepareResourceLoaders(configuration);
@@ -259,17 +264,21 @@ public class Generator
         final String methodName = Names.buildResourceMethodName(action,
             addBodyMimeTypeInMethodName ? bodyMimeType : null);
 
+        Configuration configuration = context.getConfiguration();
+        String asyncResourceTrait = configuration.getAsyncResourceTrait();
+        boolean asyncMethod = isNotBlank(asyncResourceTrait) && action.getResource().getIs().contains(asyncResourceTrait);
+        boolean returnsVoid = uniqueResponseMimeTypes.isEmpty() || asyncMethod;
+
         final JType resourceMethodReturnType = getResourceMethodReturnType(methodName, action,
-            uniqueResponseMimeTypes.isEmpty(), resourceInterface);
+            returnsVoid, resourceInterface);
 
         // the actually created unique method name should be needed in the previous method but
         // no way of doing this :(
         final JMethod method = context.createResourceMethod(resourceInterface, methodName,
             resourceMethodReturnType);
         
-        Configuration contiguration = context.getConfiguration();
-        if (contiguration.getMethodThrowException() != null ) {
-            method._throws(contiguration.getMethodThrowException());
+        if (configuration.getMethodThrowException() != null ) {
+            method._throws(configuration.getMethodThrowException());
         }
 
         context.addHttpMethodAnnotation(action.getType().toString(), method);
@@ -284,6 +293,10 @@ public class Generator
         addHeaderParameters(action, method, javadoc);
         addQueryParameters(action, method, javadoc);
         addBodyParameters(bodyMimeType, method, javadoc);
+
+        if (asyncMethod) {
+            addAsyncResponseParameter(asyncResourceTrait, method, javadoc);
+        }
     }
 
     private JType getResourceMethodReturnType(final String methodName,
@@ -520,6 +533,20 @@ public class Generator
         {
             addPlainBodyArgument(bodyMimeType, method, javadoc);
         }
+    }
+
+    private void addAsyncResponseParameter(String asyncResourceTrait,
+                                           final JMethod method,
+                                           final JDocComment javadoc) throws Exception {
+
+        final String argumentName = Names.buildVariableName(asyncResourceTrait);
+
+        final JVar argumentVariable = method.param(types.getGeneratorClass("javax.ws.rs.container.AsyncResponse"),
+            argumentName);
+
+        argumentVariable.annotate(types.getGeneratorClass("javax.ws.rs.container.Suspended"));
+
+        javadoc.addParam( argumentVariable.name()).add(asyncResourceTrait);
     }
 
     private void addPathParameters(final Action action, final JMethod method, final JDocComment javadoc)
