@@ -266,11 +266,10 @@ public class Generator
 
         Configuration configuration = context.getConfiguration();
         String asyncResourceTrait = configuration.getAsyncResourceTrait();
-        boolean asyncMethod = isNotBlank(asyncResourceTrait) && action.getResource().getIs().contains(asyncResourceTrait);
-        boolean returnsVoid = uniqueResponseMimeTypes.isEmpty() || asyncMethod;
+        boolean asyncMethod = isNotBlank(asyncResourceTrait) && action.getIs().contains(asyncResourceTrait);
 
         final JType resourceMethodReturnType = getResourceMethodReturnType(methodName, action,
-            returnsVoid, resourceInterface);
+            uniqueResponseMimeTypes.isEmpty(), asyncMethod, resourceInterface);
 
         // the actually created unique method name should be needed in the previous method but
         // no way of doing this :(
@@ -302,14 +301,22 @@ public class Generator
     private JType getResourceMethodReturnType(final String methodName,
                                               final Action action,
                                               final boolean returnsVoid,
+                                              final boolean asyncMethod,
                                               final JDefinedClass resourceInterface) throws Exception
     {
-        if (returnsVoid)
+        if (asyncMethod) {
+            // returns void but also generate the response helper object
+            createResourceMethodReturnType(methodName, action, resourceInterface);
+            return types.getGeneratorType(void.class);
+        }
+        else if (returnsVoid)
         {
+            // purely a void method, no response helper needed
             return types.getGeneratorType(void.class);
         }
         else
         {
+            // a not-void response, with response helper
             return createResourceMethodReturnType(methodName, action, resourceInterface);
         }
     }
@@ -533,20 +540,6 @@ public class Generator
         {
             addPlainBodyArgument(bodyMimeType, method, javadoc);
         }
-    }
-
-    private void addAsyncResponseParameter(String asyncResourceTrait,
-                                           final JMethod method,
-                                           final JDocComment javadoc) throws Exception {
-
-        final String argumentName = Names.buildVariableName(asyncResourceTrait);
-
-        final JVar argumentVariable = method.param(types.getGeneratorClass("javax.ws.rs.container.AsyncResponse"),
-            argumentName);
-
-        argumentVariable.annotate(types.getGeneratorClass("javax.ws.rs.container.Suspended"));
-
-        javadoc.addParam( argumentVariable.name()).add(asyncResourceTrait);
     }
 
     private void addPathParameters(final Action action, final JMethod method, final JDocComment javadoc)

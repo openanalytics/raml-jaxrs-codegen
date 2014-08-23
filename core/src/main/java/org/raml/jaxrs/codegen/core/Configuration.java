@@ -172,12 +172,12 @@ public class Configuration
     {
         this.jsonMapper = jsonMapper;
     }
-    
+
     public Class getMethodThrowException() {
         return methodThrowException;
     }
-    
-    public void setMethodThrowException(Class methodThrowException) {
+
+    public void setMethodThrowException(final Class methodThrowException) {
         this.methodThrowException = methodThrowException;
     }
 
@@ -185,7 +185,7 @@ public class Configuration
         return sourceDirectory;
     }
 
-    public void setSourceDirectory(File sourceDirectory) {
+    public void setSourceDirectory(final File sourceDirectory) {
         this.sourceDirectory = sourceDirectory;
     }
 
