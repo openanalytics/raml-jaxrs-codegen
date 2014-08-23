@@ -542,6 +542,20 @@ public class Generator
         }
     }
 
+    private void addAsyncResponseParameter(String asyncResourceTrait,
+                                           final JMethod method,
+                                           final JDocComment javadoc) throws Exception {
+
+        final String argumentName = Names.buildVariableName(asyncResourceTrait);
+
+        final JVar argumentVariable = method.param(types.getGeneratorClass("javax.ws.rs.container.AsyncResponse"),
+            argumentName);
+
+        argumentVariable.annotate(types.getGeneratorClass("javax.ws.rs.container.Suspended"));
+
+        javadoc.addParam( argumentVariable.name()).add(asyncResourceTrait);
+    }
+
     private void addPathParameters(final Action action, final JMethod method, final JDocComment javadoc)
         throws Exception
     {
